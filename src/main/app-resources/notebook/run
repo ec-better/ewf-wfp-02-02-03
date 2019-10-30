@@ -12,6 +12,8 @@ import nbformat as nbf
 import uuid
 import ast
 
+from urlparse import urlparse
+
 sys.path.append('/opt/anaconda/bin/')
 import cioppy
 ciop = cioppy.Cioppy()
@@ -117,30 +119,47 @@ ciop = cioppy.Cioppy()"""))
     
     for reference in references:
       code.append(nbf.v4.new_code_cell('reference = "' + reference + '"'))
-      code.append(nbf.v4.new_code_cell("search = ciop.search(end_point = reference, params = [], output_fields='enclosure,identifier', model='GeoTime')"))
-      code.append(nbf.v4.new_code_cell("retrieved = ciop.copy(search[0]['enclosure'], tmp_dir)"))
+      code.append(nbf.v4.new_code_cell("search = ciop.search(end_point = reference, params = [], output_fields='enclosure,identifier', model='GeoTime',creds='{}:{}'.format(indexAggCat,apikeyAggCat))"))
+      
+      code.append(nbf.v4.new_code_cell("parsed_url = urlparse(search[0]['enclosure'])")) #
+      code.append(nbf.v4.new_code_cell("durl = '%s://%s:%s@%s%s' % (list(parsed_url)[0], indexAggCat, apikeyAggCat, list(parsed_url)[1], list(parsed_url)[2])")) #
+      code.append(nbf.v4.new_code_cell("retrieved = ciop.copy(durl, tmp_dir)")) #
+      
+      #code.append(nbf.v4.new_code_cell("retrieved = ciop.copy(search[0]['enclosure'], tmp_dir)"))
       code.append(nbf.v4.new_code_cell("assert(retrieved)"))
         
     nb_stagein['cells'] = code
     fname = 'stage-in.ipynb'
     with open(fname, 'w') as f:
-      nbf.write(nb_stagein, f)  
+      nbf.write(nb_stagein, f)    
         
 def stage_in():
  
     for reference in references:
       ciop.log('INFO', 'The input reference is: ' + reference)    
       
-      search = ciop.search(end_point = reference, params = [], output_fields='enclosure,identifier', model='GeoTime')
+      if indexLtaCat in reference:
+        indexCat = indexLtaCat
+        apikeyCat = apikeyLtaCat
+      elif indexAggCat in reference:
+        indexCat = indexAggCat
+        apikeyCat = apikeyAggCat
+      
+      search = ciop.search(end_point = reference, params = [], output_fields='enclosure,identifier', model='GeoTime',creds='{}:{}'.format(indexCat,apikeyCat))
       assert(search), sys.exit(ERR_RESOLUTION)
   
-      ciop.log('INFO', 'Retrieve %s from %s' % (search[0]['identifier'], search[0]['enclosure']))
-      retrieved = ciop.copy(search[0]['enclosure'], tmp_dir)
+      #ciop.log('INFO', 'Retrieve %s from %s' % (search[0]['identifier'], search[0]['enclosure']))
+      #retrieved = ciop.copy(search[0]['enclosure'], tmp_dir)
+      
+      parsed_url = urlparse(search[0]['enclosure'])
+      durl = '%s://%s:%s@%s%s' % (list(parsed_url)[0], indexCat, apikeyCat, list(parsed_url)[1], list(parsed_url)[2])   
+      ciop.log('INFO', 'Retrieve %s from %s' % (search[0]['identifier'], durl))
+      retrieved = ciop.copy(durl, tmp_dir)
       assert(retrieved), sys.exit(ERR_STAGEIN)
 
       identifiers.append(search[0]['identifier'])
       enclosures.append(search[0]['enclosure'])
-      local_files.append(retrieved) 
+      local_files.append(retrieved)
 
 def execute(nb_source, nb_target, kernel = 'python2'):
     
@@ -203,6 +222,17 @@ def main():
     # Loops over all the inputs
     for reference in sys.stdin:
       references.append(reference.rstrip())
+    
+    # vars to access catalog
+    global indexAggCat
+    global apikeyAggCat
+    global apikeyLtaCat
+    global indexLtaCat
+    
+    indexAggCat = ciop.getparam('indexAggCat')
+    apikeyAggCat = ciop.getparam('apikeyAggCat')
+    indexLtaCat = ciop.getparam('indexLtaCat')
+    apikeyLtaCat = ciop.getparam('apikeyLtaCat')
     
     # stage-in the data
     stage_in()
