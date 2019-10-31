@@ -122,7 +122,7 @@ ciop = cioppy.Cioppy()"""))
       code.append(nbf.v4.new_code_cell("search = ciop.search(end_point = reference, params = [], output_fields='enclosure,identifier', model='GeoTime',creds='{}:{}'.format(indexAggCat,apikeyAggCat))"))
       
       code.append(nbf.v4.new_code_cell("parsed_url = urlparse(search[0]['enclosure'])")) #
-      code.append(nbf.v4.new_code_cell("durl = '%s://%s:%s@%s%s' % (list(parsed_url)[0], indexAggCat, apikeyAggCat, list(parsed_url)[1], list(parsed_url)[2])")) #
+      code.append(nbf.v4.new_code_cell("durl = '%s://%s:%s@%s%s' % (list(parsed_url)[0], indexCat, apikeyCat, list(parsed_url)[1], list(parsed_url)[2])")) #
       code.append(nbf.v4.new_code_cell("retrieved = ciop.copy(durl, tmp_dir)")) #
       
       #code.append(nbf.v4.new_code_cell("retrieved = ciop.copy(search[0]['enclosure'], tmp_dir)"))
